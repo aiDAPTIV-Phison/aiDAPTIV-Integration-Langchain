@@ -1,3 +1,6 @@
+import sys
+print(sys.executable)
+
 from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -12,7 +15,9 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'EMPTY')
 OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'model')
 if OPENAI_BASE_URL is None:
     raise ValueError("Please provide a valid `OPENAI_BASE_URL`.")
-EXAMPLE_DOCS_FILE_DIR = './Example/Files'
+EXAMPLE_DOCS_FILE_DIR = os.getenv('EXAMPLE_DOCS_FILE_DIR', None)
+if EXAMPLE_DOCS_FILE_DIR is None:
+    raise ValueError("`EXAMPLE_DOCS_FILE_DIR` is not configured properly")
 CONTEXT_LENGTH_LIMIT = 40000 # by char size
 
 
@@ -34,6 +39,10 @@ def count_tokens(text: str) -> int:
         response = httpx.post(f'{base_url}/tokenize', json=payload)
         response.raise_for_status()
         data = response.json()
+
+        if data.get('tokens', None) is not None and len(data['tokens']) == 0:
+            # Llama CPP server doesn't support this feature, so returning 0
+            return 0
         
         return data['count']
 
@@ -71,7 +80,8 @@ def load_pdf(file_path: str) -> list[str]:
             pdf_content = pdf_content[:CONTEXT_LENGTH_LIMIT]
 
         num_tokens = count_tokens(pdf_content)
-        print(f"Document tokens: {num_tokens}")
+        if num_tokens > 0:
+            print(f"Document tokens: {num_tokens}")
         docs.append(pdf_content)
     
     return docs
