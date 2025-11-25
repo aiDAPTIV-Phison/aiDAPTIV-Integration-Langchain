@@ -125,9 +125,10 @@ def build_kv_cache(docs: list[str]):
         _ = llm.invoke(message)
         end_time = time.perf_counter()
         
-        print(f"Done processing KV Cache for text {index + 1}. Tiem taken: {end_time - start_time:.4f} seconds.")
+        print(f"Done processing KV Cache for text {index + 1}. Time taken: {end_time - start_time:.4f} seconds.")
 
-    print("Finished KV Cache building for all documents")
+    print("Finished KV Cache building for all documents, navigating back to the main menu...")
+    time.sleep(5) # let user know that this is successful
 
 
 def main():
