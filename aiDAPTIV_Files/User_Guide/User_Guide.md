@@ -1,5 +1,17 @@
 # aiDAPTIV Integrations - Langchain
 
+## Dependencies
+The python dependencies are listed as follows:
+```
+langchain
+langchain-community
+langchain-openai
+pypdf
+```
+
+## Pre-requisites
+1. Make sure that the aiDAPTIV server is hosted on `http://localhost:8000/v1` so that the application can work properly.
+
 ## Installation & Setup
 
 1. Run (or double click) the `setup.bat` script to install and run the application (It may take some time to parse PDFs if there's any uploaded). 
@@ -8,7 +20,7 @@
 4. After selecting Option 2, you will be navigated to select which document to be used as context, select 1 document, then you can start chatting to get insights from the document selected.
 
 ## Example Flow
-1. Start by building KV Cache to enhance the inference speed.
+1. Start by building KV Cache to enhance the inference speed. (This may take a few minutes to process large documents)
 
 ```bash
 Before you asks question, you may upload your PDF files to the `Example/Files/` directory, then restart this application.
