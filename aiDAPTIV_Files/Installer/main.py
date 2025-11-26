@@ -19,10 +19,25 @@ if EXAMPLE_DOCS_FILE_DIR is None:
 CONTEXT_LENGTH_LIMIT = 40000 # by char size
 
 
+def aidaptiv_healthcheck():
+    """This function will ping /health endpoint on the aiDAPTIV server to see whether is it online"""
+    try:
+        health_endpoint = OPENAI_BASE_URL.replace('/v1', '/health')
+        response = httpx.get(health_endpoint)
+        response.raise_for_status()
+        if response.status_code == 200:
+            return
+
+    except (httpx.HTTPStatusError, httpx.ConnectError):
+        print(f"Please ensure that the aiDAPTIV server is up and available on `{OPENAI_BASE_URL}`!")
+        time.sleep(15)
+        sys.exit(-1) # error exit
+
+
 def count_tokens(text: str) -> int:
     """
     Helper function to count tokens given a text body
-    
+
     Args:
         text: The text to be tokenized and counted
     Returns:
@@ -41,7 +56,7 @@ def count_tokens(text: str) -> int:
         if data.get('tokens', None) is not None and len(data['tokens']) == 0:
             # Llama CPP server doesn't support this feature, so returning 0
             return 0
-        
+
         return data['count']
 
     except httpx.HTTPStatusError:
@@ -51,7 +66,7 @@ def count_tokens(text: str) -> int:
 def load_pdf(file_path: str) -> list[str]:
     """
     Parse PDF into string given a directory/file
-    
+
     Args:
         file_path: The file path to the documents, can be a directory or file path directly to PDF
     Returns:
@@ -72,7 +87,7 @@ def load_pdf(file_path: str) -> list[str]:
         pdf_content = ""
         for page in parsed:
             pdf_content += (page.page_content + "\n\n")
-        
+
         # restrict doc length limit to prevent out of context window
         if len(pdf_content) > CONTEXT_LENGTH_LIMIT:
             pdf_content = pdf_content[:CONTEXT_LENGTH_LIMIT]
@@ -81,7 +96,7 @@ def load_pdf(file_path: str) -> list[str]:
         if num_tokens > 0:
             print(f"Document tokens: {num_tokens}")
         docs.append(pdf_content)
-    
+
     return docs
 
 
@@ -91,14 +106,14 @@ def format_context_as_system_msg(context: str) -> SystemMessage:
 
     Args:
         context: The document content to be used as context to answer question
-    
+
     Returns:
         SystemMessage: The system template represented by Langchain SystemMessage object
     """
     if context == "":
         context = "No context given"
     system_msg = SystemMessage(content=f"{context}\nThe above is the context provided to answer the user question. If you do not know how to answer the user question, please specify that you do not know since the context did not contain the relevant information.")
-    
+
     return system_msg
 
 
@@ -106,7 +121,7 @@ def build_kv_cache(docs: list[str]):
     """
     Get the files in the directory and build KV Cache for accelerated inference
         Did not use asynchronous processing to avoid crashing the LLM server
-    
+
     Args:
         docs: A list of document string (context) to be processed
     """
@@ -118,7 +133,7 @@ def build_kv_cache(docs: list[str]):
         temperature=0,
         max_completion_tokens=5, # just to go through prefill to store KV Cache
     )
-    
+
     for index, doc in enumerate(docs):
         tokens_count = count_tokens(doc)
         print(f"Building KV Cache for {tokens_count} tokens")
@@ -128,11 +143,11 @@ def build_kv_cache(docs: list[str]):
             system_msg,
             human_msg,
         ]
-        
+
         start_time = time.perf_counter()
         _ = llm.invoke(message)
         end_time = time.perf_counter()
-        
+
         print(f"Done processing KV Cache for text {index + 1}. Time taken: {end_time - start_time:.4f} seconds.")
 
     print("Finished KV Cache building for all documents, navigating back to the main menu...")
@@ -141,14 +156,19 @@ def build_kv_cache(docs: list[str]):
 
 def main():
     """Main entrypoint to the application"""
+
+    # will check whether the sevrer is up
+    aidaptiv_healthcheck()
+
+    # main program
     chat_history = []
-    docs = load_pdf(EXAMPLE_DOCS_FILE_DIR) 
+    docs = load_pdf(EXAMPLE_DOCS_FILE_DIR)
     llm = ChatOpenAI(
         base_url=OPENAI_BASE_URL,
         api_key=OPENAI_API_KEY,
         model=OPENAI_MODEL,
     )
-    
+
     while True:
         os.system('cls' if os.name == 'nt' else 'clear')
         print("aiDAPTIV Langchain Integration")
@@ -157,7 +177,7 @@ def main():
         for index, file in enumerate(os.listdir(EXAMPLE_DOCS_FILE_DIR)):
             print(f"{index + 1}. {file}")
         print()
-        
+
         print("Actions available:")
         print("1. Build KV Cache (for accelerated inference)")
         print("2. Chat with AI Assistant")
@@ -166,38 +186,38 @@ def main():
         try:
             action = input("Please select your action: ").strip()
             if int(action) == 1:
-                build_kv_cache(docs) 
-            
+                build_kv_cache(docs)
+
             elif int(action) == 2:
                 # chatting interface
                 os.system('cls' if os.name == 'nt' else 'clear')
-                
+
                 # print accessed files if there's file inside
                 selected_context = ""
                 number_of_docs_currently = os.listdir(EXAMPLE_DOCS_FILE_DIR)
-                if len(number_of_docs_currently) > 0: 
+                if len(number_of_docs_currently) > 0:
                     print("Currently accessed files:")
                     for index, file in enumerate(number_of_docs_currently):
                         print(f"{index + 1}. {file}")
                     print()
-                
+
                     selected_file = input('Please select a file to act as reference for your Q&A: ').strip()
                     try:
                         selected_file = int(selected_file)
                         selected_file -= 1
                         if selected_file < 0:
                             print("You have entered invalid choice for file selection.")
-                        
+
                         selected_context = docs[selected_file]
-                        
+
                     except ValueError:
                         print("Invalid input for file selection")
-                        continue 
-                    
+                        continue
+
                     except IndexError:
                         print("File does not exists")
                         continue
-                
+
                 # chat loop
                 first_message = True
                 print("=" * 100)
@@ -213,8 +233,8 @@ def main():
                     # detect exit signal
                     user_question = input("User: ").strip()
                     if user_question.lower() == 'q':
-                        return 
-                    
+                        return
+
                     chat_history.append(HumanMessage(content=user_question))
 
                     # output the response
@@ -224,18 +244,18 @@ def main():
                         print(chunk.content, end="", flush=True)
                         full_response += chunk.content
                     chat_history.append(AIMessage(content=full_response))
-                    
+
                     print()
                     print("=" * 100, end="")
                     print("\n")
-                    
+
             elif int(action) == 3:
                 print("Application exitting...")
-                return 
-            
+                return
+
             else:
                 raise ValueError()
-            
+
         except ValueError:
             print("Your selected action is invalid.")
             continue
