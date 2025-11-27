@@ -1,37 +1,38 @@
 import os
 import sys
 import time
+
 import httpx
-
-from langchain_openai import ChatOpenAI
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 
-
-OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', None)
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'EMPTY')
-OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'model')
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", None)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "EMPTY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "model")
 if OPENAI_BASE_URL is None:
     raise ValueError("Please provide a valid `OPENAI_BASE_URL`.")
-EXAMPLE_DOCS_FILE_DIR = os.getenv('EXAMPLE_DOCS_FILE_DIR', None)
+EXAMPLE_DOCS_FILE_DIR = os.getenv("EXAMPLE_DOCS_FILE_DIR", None)
 if EXAMPLE_DOCS_FILE_DIR is None:
     raise ValueError("`EXAMPLE_DOCS_FILE_DIR` is not configured properly")
-CONTEXT_LENGTH_LIMIT = 40000 # by char size
+CONTEXT_LENGTH_LIMIT = 40000  # by char size
 
 
 def aidaptiv_healthcheck():
     """This function will ping /health endpoint on the aiDAPTIV server to see whether is it online"""
     try:
-        health_endpoint = OPENAI_BASE_URL.replace('/v1', '/health')
+        health_endpoint = OPENAI_BASE_URL.replace("/v1", "/health")
         response = httpx.get(health_endpoint)
         response.raise_for_status()
         if response.status_code == 200:
             return
 
     except (httpx.HTTPStatusError, httpx.ConnectError):
-        print(f"Please ensure that the aiDAPTIV server is up and available on `{OPENAI_BASE_URL}`!")
+        print(
+            f"Please ensure that the aiDAPTIV server is up and available on `{OPENAI_BASE_URL}`!"
+        )
         time.sleep(15)
-        sys.exit(-1) # error exit
+        sys.exit(-1)  # error exit
 
 
 def count_tokens(text: str) -> int:
@@ -45,22 +46,25 @@ def count_tokens(text: str) -> int:
     """
     try:
         payload = {
-            'model': OPENAI_MODEL,
-            'prompt': text,
+            "model": OPENAI_MODEL,
+            "prompt": text,
         }
-        base_url = OPENAI_BASE_URL.replace('/v1', '')
-        response = httpx.post(f'{base_url}/tokenize', json=payload)
+        base_url = OPENAI_BASE_URL.replace("/v1", "")
+        response = httpx.post(f"{base_url}/tokenize", json=payload)
         response.raise_for_status()
         data = response.json()
 
-        if data.get('tokens', None) is not None and len(data['tokens']) == 0:
+        if data.get("tokens", None) is not None and len(data["tokens"]) == 0:
             # Llama CPP server doesn't support this feature, so returning 0
             return 0
 
-        return data['count']
+        return data["count"]
 
     except httpx.HTTPStatusError:
-        print(f"Something went wrong when counting text token count. \nPayload: {payload}\nStatus Code: {response.status_code}\nResponse:\n{response.text}")
+        print(
+            f"Something went wrong when counting text token count. \nPayload: {payload}\nStatus Code: {response.status_code}\nResponse:\n{response.text}"
+        )
+        return 0
 
 
 def load_pdf(file_path: str) -> list[str]:
@@ -86,7 +90,7 @@ def load_pdf(file_path: str) -> list[str]:
         print(f"Length of documents pages: {len(parsed)}")
         pdf_content = ""
         for page in parsed:
-            pdf_content += (page.page_content + "\n\n")
+            pdf_content += page.page_content + "\n\n"
 
         # restrict doc length limit to prevent out of context window
         if len(pdf_content) > CONTEXT_LENGTH_LIMIT:
@@ -112,7 +116,9 @@ def format_context_as_system_msg(context: str) -> SystemMessage:
     """
     if context == "":
         context = "No context given"
-    system_msg = SystemMessage(content=f"{context}\nThe above is the context provided to answer the user question. If you do not know how to answer the user question, please specify that you do not know since the context did not contain the relevant information.")
+    system_msg = SystemMessage(
+        content=f"{context}\nThe above is the context provided to answer the user question. If you do not know how to answer the user question, please specify that you do not know since the context did not contain the relevant information."
+    )
 
     return system_msg
 
@@ -131,14 +137,14 @@ def build_kv_cache(docs: list[str]):
         api_key=OPENAI_API_KEY,
         model=OPENAI_MODEL,
         temperature=0,
-        max_completion_tokens=5, # just to go through prefill to store KV Cache
+        max_completion_tokens=5,  # just to go through prefill to store KV Cache
     )
 
     for index, doc in enumerate(docs):
         tokens_count = count_tokens(doc)
         print(f"Building KV Cache for {tokens_count} tokens")
         system_msg = format_context_as_system_msg(doc)
-        human_msg = HumanMessage(content="Hi") # random text to pass the inference
+        human_msg = HumanMessage(content="Hi")  # random text to pass the inference
         message = [
             system_msg,
             human_msg,
@@ -148,10 +154,14 @@ def build_kv_cache(docs: list[str]):
         _ = llm.invoke(message)
         end_time = time.perf_counter()
 
-        print(f"Done processing KV Cache for text {index + 1}. Time taken: {end_time - start_time:.4f} seconds.")
+        print(
+            f"Done processing KV Cache for text {index + 1}. Time taken: {end_time - start_time:.4f} seconds."
+        )
 
-    print("Finished KV Cache building for all documents, navigating back to the main menu...")
-    time.sleep(5) # let user know that this is successful
+    print(
+        "Finished KV Cache building for all documents, navigating back to the main menu..."
+    )
+    time.sleep(5)  # let user know that this is successful
 
 
 def main():
@@ -170,9 +180,11 @@ def main():
     )
 
     while True:
-        os.system('cls' if os.name == 'nt' else 'clear')
+        os.system("cls" if os.name == "nt" else "clear")
         print("aiDAPTIV Langchain Integration")
-        print("Before you asks question, you may upload your PDF files to the `Example/Files/` directory, then restart this application.")
+        print(
+            "Before you asks question, you may upload your PDF files to the `Example/Files/` directory, then restart this application."
+        )
         print("Currently accessed files:")
         for index, file in enumerate(os.listdir(EXAMPLE_DOCS_FILE_DIR)):
             print(f"{index + 1}. {file}")
@@ -190,7 +202,7 @@ def main():
 
             elif int(action) == 2:
                 # chatting interface
-                os.system('cls' if os.name == 'nt' else 'clear')
+                os.system("cls" if os.name == "nt" else "clear")
 
                 # print accessed files if there's file inside
                 selected_context = ""
@@ -201,7 +213,9 @@ def main():
                         print(f"{index + 1}. {file}")
                     print()
 
-                    selected_file = input('Please select a file to act as reference for your Q&A: ').strip()
+                    selected_file = input(
+                        "Please select a file to act as reference for your Q&A: "
+                    ).strip()
                     try:
                         selected_file = int(selected_file)
                         selected_file -= 1
@@ -221,7 +235,9 @@ def main():
                 # chat loop
                 first_message = True
                 print("=" * 100)
-                print("You have entered the chat room, enter \"Q\" to quit this application.")
+                print(
+                    'You have entered the chat room, enter "Q" to quit this application.'
+                )
                 print("=" * 100)
                 while True:
                     if first_message:
@@ -232,7 +248,7 @@ def main():
 
                     # detect exit signal
                     user_question = input("User: ").strip()
-                    if user_question.lower() == 'q':
+                    if user_question.lower() == "q":
                         return
 
                     chat_history.append(HumanMessage(content=user_question))
@@ -261,5 +277,5 @@ def main():
             continue
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
