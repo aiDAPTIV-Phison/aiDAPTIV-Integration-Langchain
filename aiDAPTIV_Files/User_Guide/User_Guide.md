@@ -14,7 +14,7 @@ pypdf
 
 ## Installation & Setup
 
-1. Run (or double click) the `setup.bat` script to install and run the application (It may take some time to parse PDFs if there's any uploaded).
+1. Run (or double click) the `Langchain_Installer_1.0.0.exe` script to install and run the application (It may take some time to parse PDFs if there's any uploaded).
 2. Choose `1. Build KV Cache (for accelerated inference)` by typing `1` to enhance the inference speed when conducting Q&A with your documents.
 3. Choose `2. Chat with AI Assistant` by typing `2` when you're ready to chat with your assistant.
 4. After selecting Option 2, you will be navigated to select which document to be used as context, select 1 document, then you can start chatting to get insights from the document selected.
