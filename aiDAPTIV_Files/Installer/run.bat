@@ -3,7 +3,7 @@
 pushd "%~dp0"
 
 :: ---- environment variables ----
-set "OPENAI_BASE_URL=http://localhost:8080/v1"
+set "OPENAI_BASE_URL=http://localhost:13141/v1"
 set "OPENAI_MODEL=model"
 :: absolute path to the PDF directory
 set "EXAMPLE_DOCS_FILE_DIR=%~dp0docs\"
