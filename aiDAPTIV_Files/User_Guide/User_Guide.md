@@ -15,7 +15,7 @@ pypdf
 ```
 
 ### Pre-requisites
-1. Make sure that the aiDAPTIV server is hosted on `http://localhost:8000/v1` so that the application can work properly.
+1. Make sure that the aiDAPTIV server is hosted on `http://localhost:13141/v1` so that the application can work properly.
 
 ### Installation Steps
 Run (or double click) the `Langchain_Installer_1.0.0.exe` script to install and run the application (It may take some time to parse PDFs if there's any uploaded).
@@ -88,7 +88,7 @@ If PDF files are already present, they may take some time to be parsed.
         ```
     - You can ask more questions about your documents. Type `q` or `Q` in the chat to exit the application. If that doesn't work you may try pressing `CTRL + C` to terminate the application.
 
-## Chapter 3: Troubleshooting 
+## Chapter 3: Troubleshooting
 ### Issue 1: Application Exits with Server Connection Error
 - **Symptoms**:
     - The application prints the message:`Please ensure that the aiDAPTIV server is up and available on <OPENAI_BASE_URL>!`
